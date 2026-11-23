@@ -1,0 +1,18 @@
+{
+  "name": "GénérateurPlan3D (GP3D)",
+  "short_name": "GP3D",
+  "description": "Générateur de plans architecturaux et prototypes mécaniques en 3D depuis texte ou dessin.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0f17",
+  "theme_color": "#00e5ff",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%230b0f17'/><path d='M256 96L416 184V328L256 416L96 328V184L256 96Z' fill='none' stroke='%2300e5ff' stroke-width='28'/><path d='M256 256V416M256 256L416 184M256 256L96 184' stroke='%2300e5ff' stroke-width='22'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

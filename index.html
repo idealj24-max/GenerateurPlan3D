@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#0b0f17" />
-  <meta name="description" content="GénérateurPlan3D (GP3D) — Conception de plans architecturaux et prototypes électromécaniques en 3D depuis texte ou dessin." />
+  <meta name="description" content="GénérateurPlan3D (GP3D) — Conception de plans architecturaux et prototypes électromécaniques en 3D par IA et dessin." />
   <link rel="manifest" href="./manifest.json" />
   <title>GénérateurPlan3D (GP3D)</title>
   <style>
@@ -17,6 +17,7 @@
       --text: #e6edf7;
       --muted: #8b9bb4;
       --success: #00e676;
+      --danger: #ff5252;
     }
 
     * {
@@ -43,16 +44,16 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 14px;
+      padding: 0 12px;
       z-index: 20;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       font-weight: 800;
-      font-size: 0.98rem;
+      font-size: 0.94rem;
       letter-spacing: 0.3px;
     }
 
@@ -62,21 +63,21 @@
       border: 1px solid var(--accent);
       padding: 2px 6px;
       border-radius: 6px;
-      font-size: 0.72rem;
+      font-size: 0.7rem;
     }
 
     .header-actions {
       display: flex;
-      gap: 6px;
+      gap: 5px;
     }
 
     button {
       background: #1b2536;
       color: var(--text);
       border: 1px solid var(--panel-border);
-      padding: 7px 10px;
+      padding: 7px 9px;
       border-radius: 8px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
       cursor: pointer;
       transition: transform 0.12s ease, border-color 0.15s ease;
@@ -84,6 +85,11 @@
 
     button:active {
       transform: scale(0.96);
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
 
     button.primary {
@@ -134,7 +140,7 @@
       border: 1px solid var(--panel-border);
       padding: 6px 10px;
       border-radius: 8px;
-      font-size: 0.76rem;
+      font-size: 0.75rem;
       color: var(--muted);
     }
 
@@ -153,7 +159,7 @@
       border-radius: 16px 16px 0 0;
       padding: 12px 14px 16px;
       z-index: 15;
-      max-height: 56dvh;
+      max-height: 58dvh;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -170,7 +176,7 @@
         bottom: 12px;
         left: auto;
         right: 12px;
-        width: 390px;
+        width: 400px;
         max-height: none;
         border-radius: 14px;
         border: 1px solid var(--panel-border);
@@ -185,7 +191,7 @@
 
     .tabs {
       display: flex;
-      gap: 6px;
+      gap: 5px;
       border-bottom: 1px solid var(--panel-border);
       padding-bottom: 8px;
       align-items: center;
@@ -194,8 +200,8 @@
     .tab-btn {
       flex: 1;
       text-align: center;
-      padding: 7px 6px;
-      font-size: 0.78rem;
+      padding: 7px 4px;
+      font-size: 0.76rem;
     }
 
     .tab-content {
@@ -210,20 +216,23 @@
       display: flex;
     }
 
-    textarea {
+    textarea, input[type="password"], input[type="text"] {
       width: 100%;
       background: #0d131d;
       border: 1px solid var(--panel-border);
       border-radius: 10px;
       color: var(--text);
       padding: 10px;
-      font-size: 0.86rem;
-      resize: none;
-      min-height: 74px;
+      font-size: 0.85rem;
       outline: none;
     }
 
-    textarea:focus {
+    textarea {
+      resize: none;
+      min-height: 74px;
+    }
+
+    textarea:focus, input:focus {
       border-color: var(--accent);
     }
 
@@ -234,7 +243,7 @@
     }
 
     .preset-chip {
-      font-size: 0.74rem;
+      font-size: 0.73rem;
       padding: 5px 9px;
       background: #141e2e;
       border-radius: 20px;
@@ -287,6 +296,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
     }
 
     .bom-item span:first-child {
@@ -297,13 +307,34 @@
     .bom-item span:last-child {
       color: var(--accent);
       font-family: monospace;
+      text-align: right;
+    }
+
+    .status-box {
+      font-size: 0.76rem;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: #0e1520;
+      border: 1px solid var(--panel-border);
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .status-box.ok {
+      border-color: var(--success);
+      color: var(--success);
+    }
+
+    .status-box.err {
+      border-color: var(--danger);
+      color: var(--danger);
     }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="brand">📐 GénérateurPlan3D <span class="tag">GP3D</span></div>
+    <div class="brand">📐 GénérateurPlan3D <span class="tag">GP3D AI</span></div>
     <div class="header-actions">
       <button id="btnExplode" title="Séparer les pièces">💥 Éclaté</button>
       <button id="btnWireframe" title="Vue filaire technique">🌐 Filaire</button>
@@ -321,20 +352,22 @@
 
     <aside class="studio-panel" id="studioPanel">
       <div class="tabs">
-        <button class="tab-btn active" data-tab="tab-text">✍️ Texte → 3D</button>
+        <button class="tab-btn active" data-tab="tab-text">✨ IA → 3D</button>
         <button class="tab-btn" data-tab="tab-draw">✏️ Dessin → 3D</button>
-        <button class="tab-btn" data-tab="tab-specs">📋 Nomenclature</button>
-        <button class="mobile-toggle" id="btnTogglePanel" style="padding: 6px 10px;">▼</button>
+        <button class="tab-btn" data-tab="tab-specs">📋 Pièces</button>
+        <button class="tab-btn" data-tab="tab-ai">🔑 Clé IA</button>
+        <button class="mobile-toggle" id="btnTogglePanel" style="padding: 6px 9px;">▼</button>
       </div>
 
-      <!-- ONGLET 1 : TEXTE VERS 3D -->
+      <!-- ONGLET 1 : IA & TEXTE VERS 3D -->
       <div class="tab-content active" id="tab-text">
-        <textarea id="promptInput" placeholder="Décris ton plan 3D : Ex. 'Plan de maison détaillée avec 2 chambres, salon et terrasse' ou 'Groupe électrogène sans carburant avec éolienne et alternateur à aimants permanents'..."></textarea>
+        <textarea id="promptInput" placeholder="Décris n'importe quel plan 3D : Ex. 'Un château d'eau métallique sur 4 pylônes avec cuve cylindrique et échelle' ou 'Une maison moderne avec garage, terrasse et piscine'..."></textarea>
         
         <div class="presets">
           <button class="preset-chip" data-preset="wind">⚡ Groupe Éolien Aimants Permanents</button>
           <button class="preset-chip" data-preset="house">🏠 Maison Détaillée + Terrasse</button>
           <button class="preset-chip" data-preset="villa">🏢 Villa Moderne R+1</button>
+          <button class="preset-chip" data-preset="ai-demo">🤖 Exemple IA : Pont Métallique</button>
         </div>
 
         <div class="slider-row">
@@ -352,6 +385,7 @@
         <button id="btnGenerateText" class="primary" style="width: 100%; padding: 10px;">
           🚀 Générer le Plan 3D
         </button>
+        <div id="genFeedback" style="font-size: 0.74rem; color: var(--muted); text-align: center;"></div>
       </div>
 
       <!-- ONGLET 2 : DESSIN 2D VERS EXTRUSION 3D -->
@@ -379,6 +413,21 @@
       <div class="tab-content" id="tab-specs">
         <div class="bom-list" id="bomContainer"></div>
       </div>
+
+      <!-- ONGLET 4 : CONFIGURATION API GEMINI -->
+      <div class="tab-content" id="tab-ai">
+        <div style="font-size: 0.8rem; color: var(--muted); line-height: 1.4;">
+          Connecte ta clé API <strong>Google Gemini</strong> pour permettre à GP3D de concevoir et assembler automatiquement en 3D <strong>n'importe quel objet, machine ou bâtiment</strong> décrit par texte.
+        </div>
+        <input type="password" id="geminiKeyInput" placeholder="Colle ta clé API Gemini (AIzaSy...)" />
+        <div style="display: flex; gap: 8px;">
+          <button id="btnClearKey" style="flex: 1;">Effacer</button>
+          <button id="btnSaveKey" class="primary" style="flex: 2;">💾 Enregistrer la Clé</button>
+        </div>
+        <div class="status-box" id="apiStatusBox">
+          Statut : Mode local actif (ajoute une clé Gemini pour la génération IA illimitée).
+        </div>
+      </div>
     </aside>
   </div>
 
@@ -395,10 +444,39 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    // Enregistrement du Service Worker PWA
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
+
+    // --- GESTION CLÉ API GEMINI ---
+    const STORAGE_KEY = 'gp3d_gemini_api_key';
+    const keyInput = document.getElementById('geminiKeyInput');
+    const apiStatusBox = document.getElementById('apiStatusBox');
+
+    function refreshApiStatus() {
+      const savedKey = localStorage.getItem(STORAGE_KEY) || '';
+      keyInput.value = savedKey;
+      if (savedKey.startsWith('AIza')) {
+        apiStatusBox.className = 'status-box ok';
+        apiStatusBox.textContent = '✅ Clé API Gemini active ! Toutes tes descriptions texte seront générées en 3D par l\'IA.';
+      } else {
+        apiStatusBox.className = 'status-box';
+        apiStatusBox.textContent = 'Statut : Mode paramétrique local actif (ajoute une clé Gemini pour générer n\'importe quel modèle 3D libre).';
+      }
+    }
+    refreshApiStatus();
+
+    document.getElementById('btnSaveKey').addEventListener('click', () => {
+      const val = keyInput.value.trim();
+      if (!val) return;
+      localStorage.setItem(STORAGE_KEY, val);
+      refreshApiStatus();
+    });
+
+    document.getElementById('btnClearKey').addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY);
+      refreshApiStatus();
+    });
 
     // --- INITIALISATION SCÈNE 3D ---
     const canvas = document.getElementById('viewport3d');
@@ -411,9 +489,9 @@
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b0f17);
-    scene.fog = new THREE.FogExp2(0x0b0f17, 0.018);
+    scene.fog = new THREE.FogExp2(0x0b0f17, 0.016);
 
-    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 250);
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 300);
     camera.position.set(11, 8, 12);
 
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -421,20 +499,20 @@
     controls.dampingFactor = 0.06;
     controls.target.set(0, 2.5, 0);
 
-    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.65);
+    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.7);
     scene.add(ambientLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
-    dirLight.position.set(12, 20, 10);
+    dirLight.position.set(14, 22, 12);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.set(1024, 1024);
     scene.add(dirLight);
 
-    const rimLight = new THREE.DirectionalLight(0x00e5ff, 0.75);
-    rimLight.position.set(-10, 8, -10);
+    const rimLight = new THREE.DirectionalLight(0x00e5ff, 0.8);
+    rimLight.position.set(-12, 10, -12);
     scene.add(rimLight);
 
-    const gridHelper = new THREE.GridHelper(30, 30, 0x00e5ff, 0x1b263b);
+    const gridHelper = new THREE.GridHelper(32, 32, 0x00e5ff, 0x1b263b);
     gridHelper.material.opacity = 0.35;
     gridHelper.material.transparent = true;
     scene.add(gridHelper);
@@ -462,6 +540,9 @@
     function registerPart(mesh, explodeOffset) {
       mesh.castShadow = true;
       mesh.receiveShadow = true;
+      if (mesh.material) {
+        mesh.material.wireframe = isWireframe;
+      }
       explodableParts.push({
         mesh,
         basePos: mesh.position.clone(),
@@ -482,7 +563,160 @@
     }
 
     // =========================================================================
-    // MODÈLE 1 : GROUPE ÉLECTROGÈNE SANS CARBURANT (ÉOLIENNE + ALTERNATEUR)
+    // MOTEUR DE RENDU IA : CONSTRUIT UNE SCÈNE 3D DEPUIS LE SCHÉMA JSON GEMINI
+    // =========================================================================
+    function createMaterialFromType(matType, colorHex) {
+      const color = new THREE.Color(colorHex || '#cbd5e1');
+      switch ((matType || '').toLowerCase()) {
+        case 'metal':
+        case 'steel':
+          return new THREE.MeshStandardMaterial({ color, metalness: 0.85, roughness: 0.25 });
+        case 'copper':
+          return new THREE.MeshStandardMaterial({ color: colorHex || 0xd97706, metalness: 0.9, roughness: 0.2 });
+        case 'glass':
+          return new THREE.MeshStandardMaterial({ color: colorHex || 0x38bdf8, transparent: true, opacity: 0.45, metalness: 0.9, roughness: 0.1 });
+        case 'wood':
+          return new THREE.MeshStandardMaterial({ color: colorHex || 0x92400e, metalness: 0.05, roughness: 0.65 });
+        case 'concrete':
+          return new THREE.MeshStandardMaterial({ color: colorHex || 0x64748b, metalness: 0.05, roughness: 0.85 });
+        default:
+          return new THREE.MeshStandardMaterial({ color, metalness: 0.25, roughness: 0.5 });
+      }
+    }
+
+    function renderAIBlueprint(blueprint) {
+      clearActiveModel();
+
+      const parts = Array.isArray(blueprint.parts) ? blueprint.parts : [];
+      parts.forEach((p, idx) => {
+        let geom;
+        const s = p.size || [1, 1, 1];
+        switch ((p.type || 'box').toLowerCase()) {
+          case 'cylinder':
+            geom = new THREE.CylinderGeometry(s[0] / 2, (p.sizeBottom ?? s[0]) / 2, s[1], 28);
+            break;
+          case 'sphere':
+            geom = new THREE.SphereGeometry(s[0] / 2, 24, 18);
+            break;
+          case 'cone':
+            geom = new THREE.ConeGeometry(s[0] / 2, s[1], 24);
+            break;
+          case 'torus':
+            geom = new THREE.TorusGeometry(s[0] / 2, Math.max(0.03, s[1] / 4), 14, 28);
+            break;
+          case 'box':
+          default:
+            geom = new THREE.BoxGeometry(s[0], s[1], s[2]);
+            break;
+        }
+
+        const mat = createMaterialFromType(p.material, p.color);
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.name = p.name || `Composant_${idx + 1}`;
+
+        const pos = p.position || [0, s[1] / 2, 0];
+        mesh.position.set(pos[0], pos[1], pos[2]);
+
+        if (Array.isArray(p.rotation)) {
+          mesh.rotation.set(
+            THREE.MathUtils.degToRad(p.rotation[0] || 0),
+            THREE.MathUtils.degToRad(p.rotation[1] || 0),
+            THREE.MathUtils.degToRad(p.rotation[2] || 0)
+          );
+        }
+
+        activeModelGroup.add(mesh);
+
+        const exp = Array.isArray(p.explode)
+          ? new THREE.Vector3(p.explode[0], p.explode[1], p.explode[2])
+          : new THREE.Vector3(pos[0] * 0.25, Math.max(0.3, pos[1] * 0.35), pos[2] * 0.25);
+
+        registerPart(mesh, exp);
+
+        if (p.rotateAxis) {
+          const holder = new THREE.Group();
+          holder.position.copy(mesh.position);
+          mesh.position.set(0, 0, 0);
+          holder.add(mesh);
+          activeModelGroup.add(holder);
+          rotatingAssemblies.push(holder);
+        }
+      });
+
+      // Cadrage caméra automatique selon la boîte englobante du modèle généré
+      const box = new THREE.Box3().setFromObject(activeModelGroup);
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z, 4);
+
+      controls.target.copy(center);
+      camera.position.set(center.x + maxDim * 1.25, center.y + maxDim * 0.95, center.z + maxDim * 1.35);
+
+      const bomItems = Array.isArray(blueprint.bom) && blueprint.bom.length > 0
+        ? blueprint.bom
+        : parts.slice(0, 10).map((p, i) => ({
+            name: p.name || `Pièce #${i + 1}`,
+            spec: `${p.type} (${(p.size || [1, 1, 1]).map(n => Number(n).toFixed(2)).join('×')}m)`
+          }));
+
+      updateBOM(blueprint.title || "Plan 3D IA", blueprint.scale || "1:20", bomItems);
+    }
+
+    async function generateWithGemini(promptText, apiKey) {
+      const systemInstruction = `Tu es un ingénieur CAO et architecte 3D expert. L'utilisateur te donne une description de projet (bâtiment, maison, machine, éolienne, pont, véhicule, meuble, etc.).
+Tu dois décomposer ce projet en un assemblage 3D précis, esthétique et réaliste composé de 12 à 35 primitives géométriques bien positionnées dans un repère métrique (Y est l'axe vertical vers le haut, Y=0 est le sol).
+Réponds UNIQUEMENT avec un objet JSON valide respectant strictement cette structure :
+{
+  "title": "Nom court du projet",
+  "scale": "1:20",
+  "parts": [
+    {
+      "name": "Nom de la pièce",
+      "type": "box | cylinder | sphere | cone | torus",
+      "size": [largeur_ou_diametre_X, hauteur_Y, profondeur_Z],
+      "position": [x, y, z],
+      "rotation": [degX, degY, degZ],
+      "color": "#hexadecimal",
+      "material": "metal | copper | glass | wood | concrete | plastic",
+      "explode": [dx, dy, dz]
+    }
+  ],
+  "bom": [
+    { "name": "Sous-ensemble technique", "spec": "Dimensions / Matériau" }
+  ]
+}
+Assure-toi que toutes les pièces sont connectées logiquement sans flotter dans le vide (sauf si elles reposent sur un support) et que les coordonnées Y partent bien du sol (Y >= 0).`;
+
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ role: 'user', parts: [{ text: `Génère le plan 3D détaillé pour : ${promptText}` }] }],
+          generationConfig: {
+            temperature: 0.35,
+            responseMimeType: 'application/json'
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData?.error?.message || `Erreur HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawText) throw new Error("Réponse vide du modèle IA.");
+
+      const cleaned = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+      return JSON.parse(cleaned);
+    }
+
+    // =========================================================================
+    // GÉNÉRATEURS LOCAUX HAUTE PRÉCISION (SANS INTERNET / FALLBACK)
     // =========================================================================
     function buildWindGenerator() {
       clearActiveModel();
@@ -616,9 +850,6 @@
       ]);
     }
 
-    // =========================================================================
-    // MODÈLE 2 : PLAN DE CONSTRUCTION DE MAISON DÉTAILLÉE (3D)
-    // =========================================================================
     function buildHousePlan(isTwoStory = false) {
       clearActiveModel();
 
@@ -732,7 +963,7 @@
     }
 
     // =========================================================================
-    // MODÈLE 3 : EXTRUSION DU DESSIN 2D EN PLAN 3D
+    // DESSIN 2D VERS EXTRUSION 3D
     // =========================================================================
     const sketchCanvas = document.getElementById('sketchCanvas');
     const ctx = sketchCanvas.getContext('2d');
@@ -866,9 +1097,12 @@
     });
 
     // =========================================================================
-    // ANALYSE TEXTE & INTERACTIONS UI
+    // ORCHESTRATION IA / LOCAL & INTERACTIONS UI
     // =========================================================================
-    function generateFromPrompt(text) {
+    const btnGen = document.getElementById('btnGenerateText');
+    const feedbackEl = document.getElementById('genFeedback');
+
+    function fallbackLocalGenerator(text) {
       const q = text.toLowerCase();
       if (q.includes('maison') || q.includes('villa') || q.includes('appartement') || q.includes('construction') || q.includes('chambre')) {
         const isR1 = q.includes('r+1') || q.includes('étage') || q.includes('etage') || q.includes('villa');
@@ -878,10 +1112,39 @@
       }
     }
 
-    document.getElementById('btnGenerateText').addEventListener('click', () => {
-      const val = document.getElementById('promptInput').value.trim();
-      generateFromPrompt(val || "eolienne");
-    });
+    async function handleGenerate() {
+      const promptText = document.getElementById('promptInput').value.trim();
+      if (!promptText) {
+        buildWindGenerator();
+        return;
+      }
+
+      const apiKey = localStorage.getItem(STORAGE_KEY) || '';
+      if (!apiKey) {
+        feedbackEl.textContent = "⚙️ Mode paramétrique local (ajoute ta clé API Gemini dans l'onglet 🔑 Clé IA pour la génération 3D libre).";
+        fallbackLocalGenerator(promptText);
+        return;
+      }
+
+      btnGen.disabled = true;
+      btnGen.textContent = "⏳ Conception 3D par l'IA en cours...";
+      feedbackEl.textContent = "L'IA calcule la géométrie, les matériaux et la nomenclature...";
+
+      try {
+        const blueprint = await generateWithGemini(promptText, apiKey);
+        renderAIBlueprint(blueprint);
+        feedbackEl.textContent = `✅ Modèle "${blueprint.title}" généré par Gemini 3D.`;
+      } catch (err) {
+        console.error(err);
+        feedbackEl.textContent = `⚠️ Erreur IA (${err.message}) — Bascule sur le moteur local.`;
+        fallbackLocalGenerator(promptText);
+      } finally {
+        btnGen.disabled = false;
+        btnGen.textContent = "🚀 Générer le Plan 3D";
+      }
+    }
+
+    btnGen.addEventListener('click', handleGenerate);
 
     document.querySelectorAll('.preset-chip').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -889,12 +1152,18 @@
         if (type === 'wind') {
           document.getElementById('promptInput').value = "Groupe électrogène sans carburant avec éolienne 3 pales et alternateur à aimants permanents flux axial";
           buildWindGenerator();
+          feedbackEl.textContent = "Modèle technique haute précision chargé.";
         } else if (type === 'house') {
           document.getElementById('promptInput').value = "Plan de construction d'une maison détaillée avec salon, 2 chambres, cuisine et terrasse bois";
           buildHousePlan(false);
+          feedbackEl.textContent = "Plan architectural plain-pied chargé.";
         } else if (type === 'villa') {
           document.getElementById('promptInput').value = "Plan de construction d'une villa moderne R+1 à étage avec terrasse";
           buildHousePlan(true);
+          feedbackEl.textContent = "Plan architectural R+1 chargé.";
+        } else if (type === 'ai-demo') {
+          document.getElementById('promptInput').value = "Un pont métallique suspendu avec deux grands pylônes en acier, des câbles porteurs, un tablier routier et des garde-corps";
+          handleGenerate();
         }
       });
     });

@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0b0f17" />
+  <meta name="description" content="GénérateurPlan3D (GP3D) — Conception de plans architecturaux et prototypes électromécaniques en 3D depuis texte ou dessin." />
+  <link rel="manifest" href="./manifest.json" />
+  <title>GénérateurPlan3D (GP3D)</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #131a26;
+      --panel-border: #233047;
+      --accent: #00e5ff;
+      --accent-dim: rgba(0, 229, 255, 0.15);
+      --text: #e6edf7;
+      --muted: #8b9bb4;
+      --success: #00e676;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      height: 54px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--panel-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+      font-size: 0.98rem;
+      letter-spacing: 0.3px;
+    }
+
+    .brand .tag {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.72rem;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    button {
+      background: #1b2536;
+      color: var(--text);
+      border: 1px solid var(--panel-border);
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.15s ease;
+    }
+
+    button:active {
+      transform: scale(0.96);
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #05101a;
+      border-color: var(--accent);
+    }
+
+    button.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .workspace {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #viewport3d {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    .hud-top {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .hud-top > * {
+      pointer-events: auto;
+    }
+
+    .badge {
+      background: rgba(19, 26, 38, 0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--panel-border);
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .badge strong {
+      color: var(--accent);
+    }
+
+    .studio-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(19, 26, 38, 0.96);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--panel-border);
+      border-radius: 16px 16px 0 0;
+      padding: 12px 14px 16px;
+      z-index: 15;
+      max-height: 56dvh;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      transition: transform 0.25s ease;
+    }
+
+    .studio-panel.collapsed {
+      transform: translateY(calc(100% - 46px));
+    }
+
+    @media (min-width: 860px) {
+      .studio-panel {
+        top: 12px;
+        bottom: 12px;
+        left: auto;
+        right: 12px;
+        width: 390px;
+        max-height: none;
+        border-radius: 14px;
+        border: 1px solid var(--panel-border);
+      }
+      .studio-panel.collapsed {
+        transform: none;
+      }
+      .mobile-toggle {
+        display: none;
+      }
+    }
+
+    .tabs {
+      display: flex;
+      gap: 6px;
+      border-bottom: 1px solid var(--panel-border);
+      padding-bottom: 8px;
+      align-items: center;
+    }
+
+    .tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 7px 6px;
+      font-size: 0.78rem;
+    }
+
+    .tab-content {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    textarea {
+      width: 100%;
+      background: #0d131d;
+      border: 1px solid var(--panel-border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 10px;
+      font-size: 0.86rem;
+      resize: none;
+      min-height: 74px;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: var(--accent);
+    }
+
+    .presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .preset-chip {
+      font-size: 0.74rem;
+      padding: 5px 9px;
+      background: #141e2e;
+      border-radius: 20px;
+    }
+
+    .sketch-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #sketchCanvas {
+      background: #090e16;
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      width: 100%;
+      max-width: 340px;
+      height: 185px;
+      touch-action: none;
+      cursor: crosshair;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .slider-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+    }
+
+    .bom-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.78rem;
+    }
+
+    .bom-item {
+      background: #0e1520;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 8px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .bom-item span:first-child {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .bom-item span:last-child {
+      color: var(--accent);
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">📐 GénérateurPlan3D <span class="tag">GP3D</span></div>
+    <div class="header-actions">
+      <button id="btnExplode" title="Séparer les pièces">💥 Éclaté</button>
+      <button id="btnWireframe" title="Vue filaire technique">🌐 Filaire</button>
+      <button id="btnExport" class="primary">⬇️ .OBJ</button>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <div class="hud-top">
+      <div class="badge" id="modelTitleBadge">Projet : <strong>Groupe Éolien Sans Carburant</strong></div>
+      <div class="badge" id="statsBadge">Pièces : <strong>48</strong> | Échelle : <strong>1:10</strong></div>
+    </div>
+
+    <canvas id="viewport3d"></canvas>
+
+    <aside class="studio-panel" id="studioPanel">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-text">✍️ Texte → 3D</button>
+        <button class="tab-btn" data-tab="tab-draw">✏️ Dessin → 3D</button>
+        <button class="tab-btn" data-tab="tab-specs">📋 Nomenclature</button>
+        <button class="mobile-toggle" id="btnTogglePanel" style="padding: 6px 10px;">▼</button>
+      </div>
+
+      <!-- ONGLET 1 : TEXTE VERS 3D -->
+      <div class="tab-content active" id="tab-text">
+        <textarea id="promptInput" placeholder="Décris ton plan 3D : Ex. 'Plan de maison détaillée avec 2 chambres, salon et terrasse' ou 'Groupe électrogène sans carburant avec éolienne et alternateur à aimants permanents'..."></textarea>
+        
+        <div class="presets">
+          <button class="preset-chip" data-preset="wind">⚡ Groupe Éolien Aimants Permanents</button>
+          <button class="preset-chip" data-preset="house">🏠 Maison Détaillée + Terrasse</button>
+          <button class="preset-chip" data-preset="villa">🏢 Villa Moderne R+1</button>
+        </div>
+
+        <div class="slider-row">
+          <span>Vue éclatée :</span>
+          <input type="range" id="explodeSlider" min="0" max="100" value="0" />
+          <span id="explodeVal">0%</span>
+        </div>
+
+        <div class="slider-row">
+          <span>Vitesse rotation :</span>
+          <input type="range" id="speedSlider" min="0" max="100" value="35" />
+          <span id="speedVal">35%</span>
+        </div>
+
+        <button id="btnGenerateText" class="primary" style="width: 100%; padding: 10px;">
+          🚀 Générer le Plan 3D
+        </button>
+      </div>
+
+      <!-- ONGLET 2 : DESSIN 2D VERS EXTRUSION 3D -->
+      <div class="tab-content" id="tab-draw">
+        <div class="sketch-wrapper">
+          <canvas id="sketchCanvas" width="340" height="185"></canvas>
+          <div style="font-size: 0.74rem; color: var(--muted); text-align: center;">
+            Trace les murs ou le contour d'une pièce au doigt / souris sur la grille.
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <span>Hauteur d'extrusion :</span>
+          <input type="range" id="extrudeHeight" min="1" max="10" step="0.5" value="3" />
+          <span id="extrudeVal">3.0 m</span>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button id="btnClearSketch" style="flex: 1;">🗑️ Effacer</button>
+          <button id="btnExtrudeSketch" class="primary" style="flex: 2;">🧊 Convertir en 3D</button>
+        </div>
+      </div>
+
+      <!-- ONGLET 3 : NOMENCLATURE & COTATIONS -->
+      <div class="tab-content" id="tab-specs">
+        <div class="bom-list" id="bomContainer"></div>
+      </div>
+    </aside>
+  </div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // Enregistrement du Service Worker PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+
+    // --- INITIALISATION SCÈNE 3D ---
+    const canvas = document.getElementById('viewport3d');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0b0f17);
+    scene.fog = new THREE.FogExp2(0x0b0f17, 0.018);
+
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 250);
+    camera.position.set(11, 8, 12);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.target.set(0, 2.5, 0);
+
+    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.65);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+    dirLight.position.set(12, 20, 10);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.set(1024, 1024);
+    scene.add(dirLight);
+
+    const rimLight = new THREE.DirectionalLight(0x00e5ff, 0.75);
+    rimLight.position.set(-10, 8, -10);
+    scene.add(rimLight);
+
+    const gridHelper = new THREE.GridHelper(30, 30, 0x00e5ff, 0x1b263b);
+    gridHelper.material.opacity = 0.35;
+    gridHelper.material.transparent = true;
+    scene.add(gridHelper);
+
+    let activeModelGroup = new THREE.Group();
+    scene.add(activeModelGroup);
+
+    let explodableParts = [];
+    let rotatingAssemblies = [];
+    let isWireframe = false;
+    let explodeFactor = 0;
+    let rotationSpeed = 0.35;
+
+    function clearActiveModel() {
+      scene.remove(activeModelGroup);
+      activeModelGroup = new THREE.Group();
+      scene.add(activeModelGroup);
+      explodableParts = [];
+      rotatingAssemblies = [];
+      explodeFactor = 0;
+      document.getElementById('explodeSlider').value = 0;
+      document.getElementById('explodeVal').textContent = '0%';
+    }
+
+    function registerPart(mesh, explodeOffset) {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      explodableParts.push({
+        mesh,
+        basePos: mesh.position.clone(),
+        offset: explodeOffset.clone()
+      });
+    }
+
+    function updateBOM(title, scaleText, items) {
+      document.getElementById('modelTitleBadge').innerHTML = `Projet : <strong>${title}</strong>`;
+      document.getElementById('statsBadge').innerHTML = `Pièces : <strong>${explodableParts.length}</strong> | Échelle : <strong>${scaleText}</strong>`;
+      const container = document.getElementById('bomContainer');
+      container.innerHTML = items.map(item => `
+        <div class="bom-item">
+          <span>${item.name}</span>
+          <span>${item.spec}</span>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // MODÈLE 1 : GROUPE ÉLECTROGÈNE SANS CARBURANT (ÉOLIENNE + ALTERNATEUR)
+    // =========================================================================
+    function buildWindGenerator() {
+      clearActiveModel();
+
+      const steelMat = new THREE.MeshStandardMaterial({ color: 0x64748b, metalness: 0.8, roughness: 0.25 });
+      const darkSteelMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.35 });
+      const copperMat = new THREE.MeshStandardMaterial({ color: 0xd97706, metalness: 0.85, roughness: 0.2 });
+      const magnetMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.95, roughness: 0.1 });
+      const bladeMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, metalness: 0.1, roughness: 0.4 });
+      const resinMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, transparent: true, opacity: 0.65, roughness: 0.2 });
+      const batteryMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.3, 0.3, 24), darkSteelMat);
+      base.position.y = 0.15;
+      activeModelGroup.add(base);
+      registerPart(base, new THREE.Vector3(0, -0.5, 0));
+
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.18, 5.2, 20), steelMat);
+      mast.position.y = 2.75;
+      activeModelGroup.add(mast);
+      registerPart(mast, new THREE.Vector3(0, 0, 0));
+
+      const nacelle = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.55, 1.6), darkSteelMat);
+      nacelle.position.set(0, 5.45, -0.2);
+      activeModelGroup.add(nacelle);
+      registerPart(nacelle, new THREE.Vector3(0, 1.2, 0));
+
+      const tailBoom = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.8, 12), steelMat);
+      tailBoom.rotation.x = Math.PI / 2;
+      tailBoom.position.set(0, 5.5, -1.6);
+      activeModelGroup.add(tailBoom);
+      registerPart(tailBoom, new THREE.Vector3(0, 1.2, -1.5));
+
+      const tailFin = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.75), bladeMat);
+      tailFin.position.set(0, 5.75, -2.35);
+      activeModelGroup.add(tailFin);
+      registerPart(tailFin, new THREE.Vector3(0, 1.5, -2.2));
+
+      const altZ = 0.85;
+      const altY = 5.45;
+
+      const rotorBack = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.08, 32), steelMat);
+      rotorBack.rotation.x = Math.PI / 2;
+      rotorBack.position.set(0, altY, altZ);
+      activeModelGroup.add(rotorBack);
+      registerPart(rotorBack, new THREE.Vector3(0, 0.4, 0.8));
+
+      const magnetGroupBack = new THREE.Group();
+      magnetGroupBack.position.set(0, altY, altZ + 0.06);
+      for (let i = 0; i < 12; i++) {
+        const angle = (i / 12) * Math.PI * 2;
+        const mag = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.28, 0.06), magnetMat);
+        mag.position.set(Math.cos(angle) * 0.52, Math.sin(angle) * 0.52, 0);
+        mag.rotation.z = angle;
+        magnetGroupBack.add(mag);
+      }
+      activeModelGroup.add(magnetGroupBack);
+      registerPart(magnetGroupBack, new THREE.Vector3(0, 0.4, 1.4));
+
+      const statorDisc = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.82, 0.12, 32), resinMat);
+      statorDisc.rotation.x = Math.PI / 2;
+      statorDisc.position.set(0, altY, altZ + 0.22);
+      activeModelGroup.add(statorDisc);
+      registerPart(statorDisc, new THREE.Vector3(0, 0.4, 2.2));
+
+      const coilsGroup = new THREE.Group();
+      coilsGroup.position.set(0, altY, altZ + 0.22);
+      for (let i = 0; i < 9; i++) {
+        const angle = (i / 9) * Math.PI * 2;
+        const coil = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.045, 12, 24), copperMat);
+        coil.position.set(Math.cos(angle) * 0.5, Math.sin(angle) * 0.5, 0);
+        coilsGroup.add(coil);
+      }
+      activeModelGroup.add(coilsGroup);
+      registerPart(coilsGroup, new THREE.Vector3(0, 0.4, 2.5));
+
+      const rotorFront = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.08, 32), steelMat);
+      rotorFront.rotation.x = Math.PI / 2;
+      rotorFront.position.set(0, altY, altZ + 0.44);
+      activeModelGroup.add(rotorFront);
+      registerPart(rotorFront, new THREE.Vector3(0, 0.4, 3.3));
+
+      const rotorHubGroup = new THREE.Group();
+      rotorHubGroup.position.set(0, altY, altZ + 0.65);
+
+      const noseCone = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.65, 24), bladeMat);
+      noseCone.rotation.x = Math.PI / 2;
+      noseCone.position.z = 0.2;
+      rotorHubGroup.add(noseCone);
+
+      for (let i = 0; i < 3; i++) {
+        const bladePivot = new THREE.Group();
+        bladePivot.rotation.z = (i * 2 * Math.PI) / 3;
+
+        const blade = new THREE.Mesh(new THREE.BoxGeometry(0.26, 2.7, 0.04), bladeMat);
+        blade.position.set(0, 1.45, 0);
+        blade.rotation.y = 0.24;
+        bladePivot.add(blade);
+        rotorHubGroup.add(bladePivot);
+      }
+
+      activeModelGroup.add(rotorHubGroup);
+      registerPart(rotorHubGroup, new THREE.Vector3(0, 0.4, 4.4));
+      rotatingAssemblies.push(rotorHubGroup);
+
+      const cabinet = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.2, 0.7), batteryMat);
+      cabinet.position.set(1.5, 0.75, 0.4);
+      activeModelGroup.add(cabinet);
+      registerPart(cabinet, new THREE.Vector3(1.5, 0, 0.5));
+
+      const rectifier = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.25, 0.15), copperMat);
+      rectifier.position.set(1.3, 1.48, 0.4);
+      activeModelGroup.add(rectifier);
+      registerPart(rectifier, new THREE.Vector3(1.3, 0.9, 0.5));
+
+      const inverter = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.3, 0.2), new THREE.MeshStandardMaterial({ color: 0x00e5ff, metalness: 0.5 }));
+      inverter.position.set(1.75, 1.5, 0.4);
+      activeModelGroup.add(inverter);
+      registerPart(inverter, new THREE.Vector3(1.8, 0.9, 0.5));
+
+      controls.target.set(0, 3.2, 0);
+      camera.position.set(8.5, 6.2, 9.5);
+
+      updateBOM("Groupe Éolien Sans Carburant", "1:10", [
+        { name: "Turbine 3 Pales Profilées", spec: "Ø 5.4 m | Calage 14°" },
+        { name: "Alternateur Flux Axial", spec: "Double Rotor Ø 300 mm" },
+        { name: "Aimants Permanents", spec: "24× Néodyme N42" },
+        { name: "Stator Triphasé", spec: "9 Bobines Cuivre 1.5mm" },
+        { name: "Redresseur + MPPT", spec: "Pont Triphasé 40A" },
+        { name: "Stockage & Onduleur", spec: "Batterie 12/24V → 220V AC" }
+      ]);
+    }
+
+    // =========================================================================
+    // MODÈLE 2 : PLAN DE CONSTRUCTION DE MAISON DÉTAILLÉE (3D)
+    // =========================================================================
+    function buildHousePlan(isTwoStory = false) {
+      clearActiveModel();
+
+      const slabMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.8 });
+      const wallExtMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, roughness: 0.6 });
+      const wallIntMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.7 });
+      const woodMat = new THREE.MeshStandardMaterial({ color: 0x92400e, roughness: 0.55 });
+      const glassMat = new THREE.MeshStandardMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45, metalness: 0.9, roughness: 0.1 });
+      const roofMat = new THREE.MeshStandardMaterial({ color: 0xb91c1c, roughness: 0.65 });
+
+      const foundation = new THREE.Mesh(new THREE.BoxGeometry(10.4, 0.3, 8.4), slabMat);
+      foundation.position.set(0, 0.15, 0);
+      activeModelGroup.add(foundation);
+      registerPart(foundation, new THREE.Vector3(0, -0.5, 0));
+
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(10.4, 0.25, 2.2), woodMat);
+      deck.position.set(0, 0.13, 5.2);
+      activeModelGroup.add(deck);
+      registerPart(deck, new THREE.Vector3(0, -0.3, 1.2));
+
+      function createFloor(yOffset, explodeY) {
+        const h = 2.7;
+        const y = yOffset + h / 2;
+
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(10, h, 0.25), wallExtMat);
+        backWall.position.set(0, y, -3.9);
+        activeModelGroup.add(backWall);
+        registerPart(backWall, new THREE.Vector3(0, explodeY, -1.5));
+
+        const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.25, h, 8), wallExtMat);
+        leftWall.position.set(-4.9, y, 0);
+        activeModelGroup.add(leftWall);
+        registerPart(leftWall, new THREE.Vector3(-1.5, explodeY, 0));
+
+        const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.25, h, 8), wallExtMat);
+        rightWall.position.set(4.9, y, 0);
+        activeModelGroup.add(rightWall);
+        registerPart(rightWall, new THREE.Vector3(1.5, explodeY, 0));
+
+        const frontLeft = new THREE.Mesh(new THREE.BoxGeometry(3.2, h, 0.25), wallExtMat);
+        frontLeft.position.set(-3.4, y, 3.9);
+        activeModelGroup.add(frontLeft);
+        registerPart(frontLeft, new THREE.Vector3(-0.8, explodeY, 1.5));
+
+        const frontRight = new THREE.Mesh(new THREE.BoxGeometry(3.2, h, 0.25), wallExtMat);
+        frontRight.position.set(3.4, y, 3.9);
+        activeModelGroup.add(frontRight);
+        registerPart(frontRight, new THREE.Vector3(0.8, explodeY, 1.5));
+
+        const bayWindow = new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.1, 0.1), glassMat);
+        bayWindow.position.set(-0.6, y - 0.1, 3.9);
+        activeModelGroup.add(bayWindow);
+        registerPart(bayWindow, new THREE.Vector3(0, explodeY, 2.0));
+
+        const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.15, 0.12), woodMat);
+        door.position.set(1.2, y - 0.25, 3.9);
+        activeModelGroup.add(door);
+        registerPart(door, new THREE.Vector3(0.3, explodeY, 2.0));
+
+        const part1 = new THREE.Mesh(new THREE.BoxGeometry(0.15, h - 0.1, 5.2), wallIntMat);
+        part1.position.set(-0.5, y, -1.2);
+        activeModelGroup.add(part1);
+        registerPart(part1, new THREE.Vector3(0, explodeY + 0.6, 0));
+
+        const part2 = new THREE.Mesh(new THREE.BoxGeometry(4.3, h - 0.1, 0.15), wallIntMat);
+        part2.position.set(-2.7, y, 0.2);
+        activeModelGroup.add(part2);
+        registerPart(part2, new THREE.Vector3(-0.6, explodeY + 0.6, 0));
+
+        const part3 = new THREE.Mesh(new THREE.BoxGeometry(5.3, h - 0.1, 0.15), wallIntMat);
+        part3.position.set(2.2, y, -0.5);
+        activeModelGroup.add(part3);
+        registerPart(part3, new THREE.Vector3(0.6, explodeY + 0.6, 0));
+      }
+
+      createFloor(0.3, 0.2);
+
+      let roofBaseY = 3.0;
+      if (isTwoStory) {
+        const midSlab = new THREE.Mesh(new THREE.BoxGeometry(10.2, 0.25, 8.2), slabMat);
+        midSlab.position.set(0, 3.12, 0);
+        activeModelGroup.add(midSlab);
+        registerPart(midSlab, new THREE.Vector3(0, 1.8, 0));
+
+        createFloor(3.25, 2.8);
+        roofBaseY = 5.95;
+      }
+
+      const roofLeft = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.2, 8.8), roofMat);
+      roofLeft.position.set(-2.6, roofBaseY + 1.15, 0);
+      roofLeft.rotation.z = 0.38;
+      activeModelGroup.add(roofLeft);
+      registerPart(roofLeft, new THREE.Vector3(-1.2, isTwoStory ? 4.8 : 2.6, 0));
+
+      const roofRight = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.2, 8.8), roofMat);
+      roofRight.position.set(2.6, roofBaseY + 1.15, 0);
+      roofRight.rotation.z = -0.38;
+      activeModelGroup.add(roofRight);
+      registerPart(roofRight, new THREE.Vector3(1.2, isTwoStory ? 4.8 : 2.6, 0));
+
+      controls.target.set(0, isTwoStory ? 3.2 : 1.8, 0);
+      camera.position.set(13, isTwoStory ? 11 : 8.5, 14);
+
+      updateBOM(isTwoStory ? "Villa Moderne R+1" : "Maison Détaillée Plain-Pied", "1:50", [
+        { name: "Emprise au sol", spec: "10.0 m × 8.0 m (80 m²)" },
+        { name: "Hauteur sous plafond", spec: "2.70 m par niveau" },
+        { name: "Distribution", spec: isTwoStory ? "Salon + 4 Chambres + 2 SDB" : "Salon + 2 Chambres + Cuisine" },
+        { name: "Terrasse extérieure", spec: "10.4 m × 2.2 m (Bois)" },
+        { name: "Charpente & Toiture", spec: "Double pente 22°" }
+      ]);
+    }
+
+    // =========================================================================
+    // MODÈLE 3 : EXTRUSION DU DESSIN 2D EN PLAN 3D
+    // =========================================================================
+    const sketchCanvas = document.getElementById('sketchCanvas');
+    const ctx = sketchCanvas.getContext('2d');
+    let strokes = [];
+    let currentStroke = [];
+    let isDrawing = false;
+
+    function drawSketchGrid() {
+      ctx.fillStyle = '#090e16';
+      ctx.fillRect(0, 0, sketchCanvas.width, sketchCanvas.height);
+
+      ctx.strokeStyle = '#162236';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= sketchCanvas.width; x += 20) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, sketchCanvas.height); ctx.stroke();
+      }
+      for (let y = 0; y <= sketchCanvas.height; y += 20) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(sketchCanvas.width, y); ctx.stroke();
+      }
+
+      ctx.strokeStyle = '#00e5ff';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      [...strokes, currentStroke].forEach(stroke => {
+        if (stroke.length < 2) return;
+        ctx.beginPath();
+        ctx.moveTo(stroke[0].x, stroke[0].y);
+        for (let i = 1; i < stroke.length; i++) {
+          ctx.lineTo(stroke[i].x, stroke[i].y);
+        }
+        ctx.stroke();
+      });
+    }
+
+    drawSketchGrid();
+
+    function getCanvasCoords(e) {
+      const rect = sketchCanvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: ((clientX - rect.left) / rect.width) * sketchCanvas.width,
+        y: ((clientY - rect.top) / rect.height) * sketchCanvas.height
+      };
+    }
+
+    sketchCanvas.addEventListener('pointerdown', (e) => {
+      isDrawing = true;
+      currentStroke = [getCanvasCoords(e)];
+      drawSketchGrid();
+    });
+
+    sketchCanvas.addEventListener('pointermove', (e) => {
+      if (!isDrawing) return;
+      const pt = getCanvasCoords(e);
+      const last = currentStroke[currentStroke.length - 1];
+      if (Math.hypot(pt.x - last.x, pt.y - last.y) > 6) {
+        currentStroke.push(pt);
+        drawSketchGrid();
+      }
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (isDrawing && currentStroke.length > 1) {
+        strokes.push(currentStroke);
+      }
+      isDrawing = false;
+      currentStroke = [];
+    });
+
+    document.getElementById('btnClearSketch').addEventListener('click', () => {
+      strokes = [];
+      currentStroke = [];
+      drawSketchGrid();
+    });
+
+    document.getElementById('btnExtrudeSketch').addEventListener('click', () => {
+      if (strokes.length === 0) {
+        alert("Dessine d'abord les contours de ton plan sur la grille bleue !");
+        return;
+      }
+
+      clearActiveModel();
+      const wallHeight = parseFloat(document.getElementById('extrudeHeight').value);
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.5 });
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.8 });
+
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 8), floorMat);
+      floor.position.y = 0.1;
+      activeModelGroup.add(floor);
+      registerPart(floor, new THREE.Vector3(0, -0.5, 0));
+
+      let totalLength = 0;
+
+      strokes.forEach((stroke, sIdx) => {
+        for (let i = 0; i < stroke.length - 1; i++) {
+          const p1 = stroke[i];
+          const p2 = stroke[i + 1];
+
+          const x1 = ((p1.x / sketchCanvas.width) - 0.5) * 11;
+          const z1 = ((p1.y / sketchCanvas.height) - 0.5) * 7;
+          const x2 = ((p2.x / sketchCanvas.width) - 0.5) * 11;
+          const z2 = ((p2.y / sketchCanvas.height) - 0.5) * 7;
+
+          const dx = x2 - x1;
+          const dz = z2 - z1;
+          const segLen = Math.hypot(dx, dz);
+          if (segLen < 0.05) continue;
+
+          totalLength += segLen;
+
+          const wallSeg = new THREE.Mesh(new THREE.BoxGeometry(segLen + 0.12, wallHeight, 0.18), wallMat);
+          wallSeg.position.set((x1 + x2) / 2, 0.2 + wallHeight / 2, (z1 + z2) / 2);
+          wallSeg.rotation.y = -Math.atan2(dz, dx);
+          activeModelGroup.add(wallSeg);
+          registerPart(wallSeg, new THREE.Vector3(0, 0.5 + (sIdx * 0.4), 0));
+        }
+      });
+
+      controls.target.set(0, wallHeight / 2, 0);
+      camera.position.set(10, 9, 11);
+
+      updateBOM("Plan Extrudé depuis Croquis 2D", "1:25", [
+        { name: "Tracés convertis", spec: `${strokes.length} ensemble(s)` },
+        { name: "Hauteur d'extrusion", spec: `${wallHeight.toFixed(1)} m` },
+        { name: "Linéaire total murs", spec: `${totalLength.toFixed(1)} m` },
+        { name: "Épaisseur paroi", spec: "0.18 m (18 cm)" }
+      ]);
+    });
+
+    // =========================================================================
+    // ANALYSE TEXTE & INTERACTIONS UI
+    // =========================================================================
+    function generateFromPrompt(text) {
+      const q = text.toLowerCase();
+      if (q.includes('maison') || q.includes('villa') || q.includes('appartement') || q.includes('construction') || q.includes('chambre')) {
+        const isR1 = q.includes('r+1') || q.includes('étage') || q.includes('etage') || q.includes('villa');
+        buildHousePlan(isR1);
+      } else {
+        buildWindGenerator();
+      }
+    }
+
+    document.getElementById('btnGenerateText').addEventListener('click', () => {
+      const val = document.getElementById('promptInput').value.trim();
+      generateFromPrompt(val || "eolienne");
+    });
+
+    document.querySelectorAll('.preset-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.dataset.preset;
+        if (type === 'wind') {
+          document.getElementById('promptInput').value = "Groupe électrogène sans carburant avec éolienne 3 pales et alternateur à aimants permanents flux axial";
+          buildWindGenerator();
+        } else if (type === 'house') {
+          document.getElementById('promptInput').value = "Plan de construction d'une maison détaillée avec salon, 2 chambres, cuisine et terrasse bois";
+          buildHousePlan(false);
+        } else if (type === 'villa') {
+          document.getElementById('promptInput').value = "Plan de construction d'une villa moderne R+1 à étage avec terrasse";
+          buildHousePlan(true);
+        }
+      });
+    });
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+        document.getElementById('studioPanel').classList.remove('collapsed');
+      });
+    });
+
+    document.getElementById('btnTogglePanel').addEventListener('click', () => {
+      const panel = document.getElementById('studioPanel');
+      panel.classList.toggle('collapsed');
+      document.getElementById('btnTogglePanel').textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
+    });
+
+    const explodeSlider = document.getElementById('explodeSlider');
+    function applyExplode(val) {
+      explodeFactor = val / 100;
+      document.getElementById('explodeVal').textContent = `${val}%`;
+      explodableParts.forEach(p => {
+        p.mesh.position.copy(p.basePos).addScaledVector(p.offset, explodeFactor);
+      });
+    }
+
+    explodeSlider.addEventListener('input', (e) => applyExplode(parseInt(e.target.value, 10)));
+    document.getElementById('btnExplode').addEventListener('click', () => {
+      const next = explodeFactor > 0.1 ? 0 : 85;
+      explodeSlider.value = next;
+      applyExplode(next);
+    });
+
+    document.getElementById('speedSlider').addEventListener('input', (e) => {
+      const v = parseInt(e.target.value, 10);
+      rotationSpeed = v / 100;
+      document.getElementById('speedVal').textContent = `${v}%`;
+    });
+
+    document.getElementById('extrudeHeight').addEventListener('input', (e) => {
+      document.getElementById('extrudeVal').textContent = `${parseFloat(e.target.value).toFixed(1)} m`;
+    });
+
+    document.getElementById('btnWireframe').addEventListener('click', (e) => {
+      isWireframe = !isWireframe;
+      e.target.classList.toggle('active', isWireframe);
+      activeModelGroup.traverse(obj => {
+        if (obj.isMesh && obj.material) {
+          obj.material.wireframe = isWireframe;
+        }
+      });
+    });
+
+    document.getElementById('btnExport').addEventListener('click', () => {
+      let objOutput = "# GenerateurPlan3D (GP3D) Export\n";
+      let vertexOffset = 1;
+
+      activeModelGroup.updateMatrixWorld(true);
+      activeModelGroup.traverse(child => {
+        if (!child.isMesh || !child.geometry) return;
+        const geom = child.geometry;
+        const pos = geom.attributes.position;
+        if (!pos) return;
+
+        objOutput += `o ${child.name || 'Piece_GP3D'}\n`;
+        const v = new THREE.Vector3();
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos, i).applyMatrix4(child.matrixWorld);
+          objOutput += `v ${v.x.toFixed(4)} ${v.y.toFixed(4)} ${v.z.toFixed(4)}\n`;
+        }
+
+        const index = geom.index;
+        if (index) {
+          for (let i = 0; i < index.count; i += 3) {
+            objOutput += `f ${index.getX(i) + vertexOffset} ${index.getX(i + 1) + vertexOffset} ${index.getX(i + 2) + vertexOffset}\n`;
+          }
+        } else {
+          for (let i = 0; i < pos.count; i += 3) {
+            objOutput += `f ${i + vertexOffset} ${i + 1 + vertexOffset} ${i + 2 + vertexOffset}\n`;
+          }
+        }
+        vertexOffset += pos.count;
+      });
+
+      const blob = new Blob([objOutput], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'plan_GP3D.obj';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      rotatingAssemblies.forEach(group => {
+        group.rotation.z -= 0.06 * rotationSpeed;
+      });
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    buildWindGenerator();
+    animate();
+  </script>
+</body>
+</html>

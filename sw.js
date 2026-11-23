@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gp3d-cache-v1';
+const CACHE_NAME = 'gp3d-cache-v2';
 const ASSETS = [
   './',
   './index.html',
